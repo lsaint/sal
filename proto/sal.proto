@@ -1,0 +1,36 @@
+package proto;
+
+message GateInHeader {
+    required uint32 uid = 1;
+    required uint32 sid = 2;
+}
+
+message GateInPack {
+    required GateInHeader header = 1;
+    required uint32 uri = 2;
+    required bytes bin = 3;
+}
+
+message GateOutPack {
+    repeated uint32 uids = 1;
+    optional uint32 sid = 2;
+    required bytes bin = 3;
+}
+
+message GiftCbPack {
+    required  string Sid         = 1;
+    required  string FromUid     = 2;
+    required  string ToUid       = 3;
+    required  string GiftId      = 4;
+    required  string GiftCount   = 5;
+    required  string OrderId     = 6;
+    required  string Op          = 7;
+}
+
+
+message SalPack {
+    required    uint32  sid = 1;
+    optional    uint32  sub = 3;
+    repeated    uint32  uids = 2;
+    optional    bytes   bin = 4;
+}
