@@ -51,6 +51,7 @@ func (this *SalFrontend) Start() {
             fmt.Println("Accept error", err)
             continue
         }
+        fmt.Println("sal agent connected")
         go this.acceptConn(conn)
     }
 }
@@ -65,6 +66,7 @@ func (this *SalFrontend) acceptConn(conn net.Conn) {
         this.buffChan <- &ConnBuff{cliConn, nil}
         break
     }
+    fmt.Println("sal agent disconnect")
 }
 
 func (this *SalFrontend) parse() {
