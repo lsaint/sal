@@ -21,18 +21,16 @@ const (
 
 type SalFrontend struct {
     buffChan        chan *ConnBuff
-    sid2conn        map[uint32]*ClientConnection
-    conn2sid        map[*ClientConnection]uint32
-    SalEntry        chan *proto.SalPack
-    SalExit         chan *proto.SalPack
+    agentConns      []*ClientConnection         
+    FromSalChan     chan *proto.SalPack
+    ToSalChan       chan *proto.SalPack
 }
 
 func NewSalFrontend(entry, exit chan *proto.SalPack) *SalFrontend {
     gs := &SalFrontend{buffChan: make(chan *ConnBuff),
-                    sid2conn: make(map[uint32]*ClientConnection),
-                    conn2sid: make(map[*ClientConnection]uint32),
-                    SalEntry: entry,
-                    SalExit:  exit}
+                    agentConns:  make([]*ClientConnection, 0, 1),
+                    FromSalChan: entry,
+                    ToSalChan:  exit}
     go gs.parse()
     return gs
 }
@@ -91,7 +89,8 @@ func (this *SalFrontend) parse() {
                     this.unregister(conn)
                 }
 
-            case pack := <-this.SalExit :
+            case pack := <-this.FromSalChan :
+                fmt.Println("FromSalChan", pack)
                 this.comeout(pack)
         }
     }
@@ -107,35 +106,36 @@ func (this *SalFrontend) unpack(b []byte) (msg *proto.SalPack, err error) {
 
 func (this *SalFrontend) comein(b []byte) {
     if msg, err := this.unpack(b); err == nil {
-        this.SalEntry <- msg
+        this.ToSalChan <- msg
     }
 }
 
 func (this *SalFrontend) comeout(pack *proto.SalPack) {
-    conn, exist := this.sid2conn[pack.GetSid()]
-    if !exist {
-        return
-    }
-    if data, err := pb.Marshal(pack); err == nil {
-        uri_field := make([]byte, LEN_URI)
-        binary.LittleEndian.PutUint32(uri_field, uint32(URI_TRANSPORT))
-        data = append(data, uri_field...)
-        conn.Send(data)
+    for _, conn := range this.agentConns {
+        if data, err := pb.Marshal(pack); err == nil {
+            uri_field := make([]byte, LEN_URI)
+            binary.LittleEndian.PutUint32(uri_field, uint32(URI_TRANSPORT))
+            data = append(uri_field, data...)
+            fmt.Println("send to agent", len(data))
+            conn.Send(data)
+        }
     }
 }
 
 func (this *SalFrontend) register(b []byte, cc *ClientConnection) {
-    if msg, err := this.unpack(b); err == nil {
-        sid := msg.GetSid()    
-        this.sid2conn[sid] = cc
-        this.conn2sid[cc] = sid
-    }
+    fmt.Println("register")
+    this.agentConns = append(this.agentConns, cc)
 }
 
 func (this *SalFrontend) unregister(cc *ClientConnection) {
-    sid := this.conn2sid[cc]
-    delete(this.sid2conn, sid)
-    delete(this.conn2sid, cc)
+    fmt.Println("unregister")
+    for i, c := range this.agentConns {
+        if cc == c {
+            last := len(this.agentConns) - 1
+            this.agentConns[i] = this.agentConns[last]
+            this.agentConns = this.agentConns[:last]
+        }
+    }
 }
 
 

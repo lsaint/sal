@@ -15,7 +15,8 @@ import "C"
 import (
     "fmt"
     "unsafe"
-    "reflect"
+    //"reflect"
+    "math"
 
     pb "code.google.com/p/goprotobuf/proto"
     
@@ -30,7 +31,7 @@ type SalBackend struct {
 }
 
 func NewSalBackend(rc, sd chan *proto.SalPack) *SalBackend {
-    key := C.CString("ssssssssssssssssssss")
+    key := C.CString("b218dd6a62724b799cc0c39625b2f386a5506f82")
     defer C.free(unsafe.Pointer(key))
     sal := C.openyy_SAL_New(10088, key)
     if C.openyy_SAL_Init(sal) < 0 {
@@ -102,12 +103,12 @@ func (this *SalBackend) handleSubscribeRep(ev *C.openyy_SALEvent_t) {
         &unsub_chns, &unsub_count, &min, &max)
     fmt.Println("subscribe count:", sub_chns, sub_count, min, max)
     
-    var theGoSlice []*C.uint
-    sliceHeader := (*reflect.SliceHeader)((unsafe.Pointer(&theGoSlice)))
-    sliceHeader.Cap = int(sub_count)
-    sliceHeader.Len = int(sub_count)
-    sliceHeader.Data = uintptr(unsafe.Pointer(&sub_chns))
-    fmt.Println(theGoSlice, *theGoSlice[0])
+    //var theGoSlice []*C.uint
+    //sliceHeader := (*reflect.SliceHeader)((unsafe.Pointer(&theGoSlice)))
+    //sliceHeader.Cap = int(sub_count)
+    //sliceHeader.Len = int(sub_count)
+    //sliceHeader.Data = uintptr(unsafe.Pointer(&sub_chns))
+    //fmt.Println(theGoSlice, *theGoSlice[0])
 }
 
 func (this *SalBackend) handleLoginRep(ev *C.openyy_SALEvent_t) {
@@ -121,11 +122,11 @@ func (this *SalBackend) handleLoginRep(ev *C.openyy_SALEvent_t) {
 }
 
 func (this *SalBackend) subscribe() {
-    C.openyy_SAL_SubscribeHashChRange(this.sal, 0, 0, 43670710);
+    C.openyy_SAL_SubscribeHashChRange(this.sal, 0, math.MaxUint32, C._SAL_HASH_CH_RANGE_NONE)
 }
 
 func (this *SalBackend) parseAndSendMsgToSal() {
-    for pack := range this.recvChan {
+    for pack := range this.sendChan {
         sid := C.uint(pack.GetSid())
         sub := C.uint(pack.GetSub())
         uids := pack.GetUids()
@@ -154,10 +155,10 @@ func (this *SalBackend) handleUserMsg(ev *C.openyy_SALEvent_t) {
     var top_ch, uid, msg_size C.uint
     var msg *C.char
     C.openyy_SALUserMsgEvent_Datas(ev, nil, &top_ch, &uid, &msg, &msg_size);
-    fmt.Println("[USR_MSG]", top_ch, uid, msg_size)
     //if msg_size < 8 {return}
 
     b := C.GoBytes(unsafe.Pointer(msg), C.int(msg_size))
+    fmt.Println("[USR_MSG]", top_ch, uid, msg_size, string(b))
     uids := make([]uint32, 1, 1)
     uids[0] = uint32(uid)
     pack := &proto.SalPack{Uids: uids, Sid: pb.Uint32(uint32(top_ch)), Bin: b}

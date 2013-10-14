@@ -33,14 +33,14 @@ func NewClientConnection(c net.Conn) *ClientConnection {
 
 func (this *ClientConnection) Send(buf []byte) {
     head := make([]byte, LEN_HEAD)
-    binary.LittleEndian.PutUint32(head, uint32(len(buf)))
+    binary.LittleEndian.PutUint16(head, uint16(len(buf)))
     buf = append(head, buf...)
 
     select {
         case this.sendchan <- buf:
 
         default:
-            //fmt.Println("send chan overflow or closed")
+            fmt.Println("send chan overflow or closed")
     }
 }
 
@@ -100,7 +100,7 @@ func (this *ClientConnection) duplexReadBody() (ret []byte,  ok bool) {
     if !this.duplexRead(buff_head) {
         return
     }
-    len_head := binary.LittleEndian.Uint32(buff_head)
+    len_head := binary.LittleEndian.Uint16(buff_head)
     if len_head > MAX_LEN_HEAD {
         fmt.Println("message len too long", len_head)
         this.Close()
