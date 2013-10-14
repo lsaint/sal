@@ -14,7 +14,7 @@ const (
     URI_REGISTER        = 1
     URI_TRANSPORT       = 2
     URI_UNREGISTER      = 3
-    LEN_URI             = 4
+    LEN_URI             = 2
     FRONT_PORT          = ":3929"
 )
 
@@ -79,7 +79,7 @@ func (this *SalFrontend) parse() {
                     continue
                 }
 
-                uri := binary.LittleEndian.Uint32(msg[:LEN_URI])
+                uri := binary.LittleEndian.Uint16(msg[:LEN_URI])
                 switch uri {
                 case URI_REGISTER:
                     this.register(msg[LEN_URI:], conn)
@@ -90,7 +90,6 @@ func (this *SalFrontend) parse() {
                 }
 
             case pack := <-this.FromSalChan :
-                fmt.Println("FromSalChan", pack)
                 this.comeout(pack)
         }
     }
@@ -114,9 +113,8 @@ func (this *SalFrontend) comeout(pack *proto.SalPack) {
     for _, conn := range this.agentConns {
         if data, err := pb.Marshal(pack); err == nil {
             uri_field := make([]byte, LEN_URI)
-            binary.LittleEndian.PutUint32(uri_field, uint32(URI_TRANSPORT))
+            binary.LittleEndian.PutUint16(uri_field, uint16(URI_TRANSPORT))
             data = append(uri_field, data...)
-            fmt.Println("send to agent", len(data))
             conn.Send(data)
         }
     }

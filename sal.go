@@ -34,8 +34,8 @@ func main() {
     //    log.Println(http.ListenAndServe("localhost:6061", nil))
     //}()
 
-    sal_recv_chan := make(chan *proto.SalPack)
-    sal_send_chan := make(chan *proto.SalPack)
+    sal_recv_chan := make(chan *proto.SalPack, 10240)
+    sal_send_chan := make(chan *proto.SalPack, 10240)
     sal_bakend := network.NewSalBackend(sal_recv_chan, sal_send_chan)
     go sal_bakend.Start()
     sal_frontend := network.NewSalFrontend(sal_recv_chan, sal_send_chan)

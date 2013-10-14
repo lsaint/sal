@@ -127,6 +127,7 @@ func (this *SalBackend) subscribe() {
 
 func (this *SalBackend) parseAndSendMsgToSal() {
     for pack := range this.sendChan {
+        fmt.Println("send to sal", pack)
         sid := C.uint(pack.GetSid())
         sub := C.uint(pack.GetSub())
         uids := pack.GetUids()
@@ -134,18 +135,21 @@ func (this *SalBackend) parseAndSendMsgToSal() {
         msg_len := C.uint(len(msg))
 
         if sub != 0 {
+            fmt.Println("sub channel cast")
             C.openyy_SAL_BcMsgToSubCh(this.sal, sid, sub, 0,
                    (*C.char)(unsafe.Pointer(&msg[0])), msg_len )
-            return
+            continue
         }
 
         if len(uids) != 0 {
+            fmt.Println("multicast", uids, len(msg))
             C.openyy_SAL_MulticastMsgToUsers(this.sal, sid, 0,
                     (*C.uint)(unsafe.Pointer(&uids[0])), C.uint(len(uids)),
                     (*C.char)(unsafe.Pointer(&msg[0])), msg_len)
-            return
+            continue
         }
 
+        fmt.Println("Broadcast")
         C.openyy_SAL_BcMsgToTopCh(this.sal, sid, 0,
                     (*C.char)(unsafe.Pointer(&msg[0])), msg_len)
     }
@@ -158,7 +162,7 @@ func (this *SalBackend) handleUserMsg(ev *C.openyy_SALEvent_t) {
     //if msg_size < 8 {return}
 
     b := C.GoBytes(unsafe.Pointer(msg), C.int(msg_size))
-    fmt.Println("[USR_MSG]", top_ch, uid, msg_size, string(b))
+    fmt.Println("[USR_MSG]", top_ch, uid, msg_size)
     uids := make([]uint32, 1, 1)
     uids[0] = uint32(uid)
     pack := &proto.SalPack{Uids: uids, Sid: pb.Uint32(uint32(top_ch)), Bin: b}
