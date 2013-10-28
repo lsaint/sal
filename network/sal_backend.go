@@ -14,9 +14,10 @@ import "C"
 
 import (
     "fmt"
-    "unsafe"
-    //"reflect"
+    "log"
     "math"
+    "unsafe"
+    "strings"
 
     pb "code.google.com/p/goprotobuf/proto"
     
@@ -44,7 +45,7 @@ func (this *SalBackend) Start() {
     if C.openyy_SAL_Start(this.sal) < 0 {
         panic("Start sal error")
     }
-    fmt.Println("SalBackend running")
+    log.Println("SalBackend running")
 
     ev_chan := make(chan *C.openyy_SALEvent_t)
     done := make(chan bool)
@@ -71,7 +72,7 @@ func (this *SalBackend) handleEvent(c chan *C.openyy_SALEvent_t, d chan bool) {
         ev_type := C.openyy_SALEvent_GetType(ev) 
         switch ev_type {
             case C._SAL_LOG_EVENT_TP:
-                //this.handleLog(ev)
+                this.handleLog(ev)
 
             case C._SAL_SUBSCRIBE_HASH_CHANNEL_RES_EVENT_TP:
                 this.handleSubscribeRep(ev)
@@ -116,7 +117,10 @@ func (this *SalBackend) handleLog(ev *C.openyy_SALEvent_t) {
     var tm C.time_t
     var level_name, msg *C.char
     C.openyy_SALLogEvent_Datas(ev, &tm, &level_name, &msg)
-    fmt.Println("[LOG]", tm, C.GoString(level_name), C.GoString(msg))
+    go_msg := C.GoString(msg)
+    if !strings.Contains(go_msg, "sal message from client") {
+        log.Println("[SAL]", C.GoString(level_name), go_msg)
+    }
 }
 
 func (this *SalBackend) handleSubscribeRep(ev *C.openyy_SALEvent_t) {
@@ -125,13 +129,6 @@ func (this *SalBackend) handleSubscribeRep(ev *C.openyy_SALEvent_t) {
     C.openyy_SALSubscribeHashChannelResEvent_Datas(ev, &sub_chns, &sub_count, 
         &unsub_chns, &unsub_count, &min, &max)
     fmt.Println("subscribe count:", sub_chns, sub_count, min, max)
-    
-    //var theGoSlice []*C.uint
-    //sliceHeader := (*reflect.SliceHeader)((unsafe.Pointer(&theGoSlice)))
-    //sliceHeader.Cap = int(sub_count)
-    //sliceHeader.Len = int(sub_count)
-    //sliceHeader.Data = uintptr(unsafe.Pointer(&sub_chns))
-    //fmt.Println(theGoSlice, *theGoSlice[0])
 }
 
 func (this *SalBackend) handleLoginRep(ev *C.openyy_SALEvent_t) {
