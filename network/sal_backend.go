@@ -21,6 +21,7 @@ import (
 
     pb "code.google.com/p/goprotobuf/proto"
     
+    "sal/conf"
     "sal/proto"
 )
 
@@ -32,7 +33,7 @@ type SalBackend struct {
 }
 
 func NewSalBackend(rc, sd chan *proto.SalPack) *SalBackend {
-    key := C.CString("b218dd6a62724b799cc0c39625b2f386a5506f82")
+    key := C.CString(conf.CF.Key)
     defer C.free(unsafe.Pointer(key))
     sal := C.openyy_SAL_New(10088, key)
     if C.openyy_SAL_Init(sal) < 0 {
